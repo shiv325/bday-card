@@ -3,10 +3,7 @@ import sqlite3
 import os
 import base64
 import streamlit.components.v1 as components
-import json
-import requests
 from contextlib import closing
-from streamlit_lottie import st_lottie
 
 # --- Database Functions ---
 @st.cache_resource
