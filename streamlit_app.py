@@ -7,34 +7,34 @@ from contextlib import closing
 
 # --- Database Functions ---
 @st.cache_resource
+# --- Wishes DB Init ---
 def init_db():
-    conn = sqlite3.connect("wishes.db", check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    with closing(conn.cursor()) as cursor:
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS wishes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL,
-                message TEXT NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
+    with sqlite3.connect("wishes.db", check_same_thread=False) as conn:
+        with closing(conn.cursor()) as cursor:
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS wishes (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL,
+                    message TEXT NOT NULL,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            conn.commit()
+
+# --- Wishes Operations ---
+def add_wish(name, message):
+    with sqlite3.connect("wishes.db", check_same_thread=False) as conn:
+        conn.execute("INSERT INTO wishes (name, message) VALUES (?, ?)", (name, message))
         conn.commit()
-    return conn
 
-def add_wish(conn, name, message):
-    with closing(conn.cursor()) as cursor:
-        cursor.execute("INSERT INTO wishes (name, message) VALUES (?, ?)", (name, message))
-        conn.commit()
+def get_wishes():
+    with sqlite3.connect("wishes.db", check_same_thread=False) as conn:
+        conn.row_factory = sqlite3.Row
+        return conn.execute("SELECT id, name, message FROM wishes ORDER BY created_at DESC").fetchall()
 
-def get_wishes(conn):
-    with closing(conn.cursor()) as cursor:
-        cursor.execute("SELECT id, name, message FROM wishes ORDER BY created_at DESC")
-        return cursor.fetchall()
-
-def delete_wish(conn, wish_id):
-    with closing(conn.cursor()) as cursor:
-        cursor.execute("DELETE FROM wishes WHERE id = ?", (wish_id,))
+def delete_wish(wish_id):
+    with sqlite3.connect("wishes.db", check_same_thread=False) as conn:
+        conn.execute("DELETE FROM wishes WHERE id = ?", (wish_id,))
         conn.commit()
 
 # --- Memories Notes Database ---
@@ -69,9 +69,6 @@ def save_note_for_image(conn, filename, note):
         """, (filename, note))
         conn.commit()
 
-
-# --- Init ---
-db_conn = init_db()
 st.set_page_config(layout="wide")
 
 # --- Background Music with Play/Pause ---
@@ -365,7 +362,7 @@ with st.expander("💌 Send a Birthday Wish!"):
         submitted = st.form_submit_button("Send Wish")
         if submitted:
             if sender_name and wish_message:
-                add_wish(db_conn, sender_name, wish_message)
+                add_wish(sender_name, wish_message)
                 st.success("Your wish has been sent!")
                 st.session_state["show_wishes"] = True
                 st.rerun()
@@ -380,7 +377,7 @@ st.session_state.show_wishes = st.checkbox(
 )
 
 if st.session_state.show_wishes:
-    wishes = get_wishes(db_conn)
+    wishes = get_wishes()
     if wishes:
         st.subheader("All the lovely wishes just for you!")
         for wish in wishes:
@@ -390,7 +387,7 @@ if st.session_state.show_wishes:
                 st.info(f"**Message:** {wish['message']}")
             with delete_col:
                 if st.button("🗑️", key=f"delete_{wish['id']}"):
-                    delete_wish(db_conn, wish['id'])
+                    delete_wish(wish['id'])
                     st.success("Wish deleted successfully!")
                     st.rerun()
     else:
