@@ -350,7 +350,7 @@ function stopConfetti() {
 </script>
 """
 
-components.html(cake_html, height=400, scrolling=False)
+components.html(cake_html, height=550, scrolling=False)
 
 st.markdown("### Hope you have a wonderful day filled with joy and laughter! 🎈")
 
